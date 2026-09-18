@@ -23,7 +23,18 @@ const PATHS = {
   send: '<path d="M4.5 12L19 4.5 13 19l-2.5-6L4.5 12Z" stroke-linejoin="round"/>',
   lock: '<rect x="5.5" y="10.5" width="13" height="9" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" stroke-linecap="round"/>',
   stethoscope: '<path d="M6 4v6a4 4 0 0 0 8 0V4" stroke-linecap="round"/><path d="M10 14v1.5a5 5 0 0 0 10 0V13" stroke-linecap="round"/><circle cx="20" cy="11.5" r="1.6"/><circle cx="6" cy="4" r="1.3"/><circle cx="10" cy="4" r="1.3"/>',
-  crown: '<path d="M4 18h16M5 18l-1.5-9L9 12l3-6 3 6 5.5-3L18 18" stroke-linejoin="round"/>'
+  crown: '<path d="M4 18h16M5 18l-1.5-9L9 12l3-6 3 6 5.5-3L18 18" stroke-linejoin="round"/>',
+  battery: '<rect x="3" y="8" width="16" height="8" rx="2"/><path d="M21 10.5v3" stroke-linecap="round"/><path d="M6 11v2" stroke-linecap="round"/>',
+  wave: '<path d="M3 12c1.5-3 3-3 4.5 0s3 3 4.5 0 3-3 4.5 0 3 3 4.5 0" stroke-linecap="round" stroke-linejoin="round"/>',
+  smile: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 14.5c1 1.3 2.2 2 3.5 2s2.5-.7 3.5-2" stroke-linecap="round"/><path d="M8.7 9.5h.01M15.3 9.5h.01" stroke-linecap="round" stroke-width="2.4"/>',
+  bolt: '<path d="M13 3 5 13.5h5.5L11 21l8-11h-5.5Z" stroke-linejoin="round"/>',
+  bone: '<path d="M7 8.5a2.3 2.3 0 1 0-3.4 2A2.3 2.3 0 1 0 6 14.4l6-6a2.3 2.3 0 1 0 3.4-2A2.3 2.3 0 1 0 18 2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 15.6a2.3 2.3 0 1 0 3.4 2A2.3 2.3 0 1 0 18 21.4l-6-6" stroke-linecap="round" stroke-linejoin="round"/>',
+  droplet: '<path d="M12 3s6.5 7.4 6.5 11.5A6.5 6.5 0 0 1 5.5 14.5C5.5 10.4 12 3 12 3Z" stroke-linejoin="round"/>',
+  scale: '<path d="M12 3v18M7 21h10" stroke-linecap="round"/><path d="M5 7h14" stroke-linecap="round"/><path d="M5 7 2 13a3 3 0 0 0 6 0L5 7ZM19 7l-3 6a3 3 0 0 0 6 0l-3-6Z" stroke-linejoin="round"/>',
+  shield: '<path d="M12 3 5 6v5.5c0 4.6 3 7.7 7 9 4-1.3 7-4.4 7-9V6l-7-3Z" stroke-linejoin="round"/><path d="M9 12l2 2 4-4.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  download: '<path d="M12 4v11" stroke-linecap="round"/><path d="M7.5 11l4.5 4.5L16.5 11" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19.5h14" stroke-linecap="round"/>',
+  userX: '<circle cx="10" cy="8" r="3.5"/><path d="M4 20c0-3.6 2.7-6 6-6s6 2.4 6 6" stroke-linecap="round"/><path d="M16.5 9.5l4 4M20.5 9.5l-4 4" stroke-linecap="round"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V19.6a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H4.4a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.55-1.1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5a1.7 1.7 0 0 0 1-1.55V4.4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V10.5a1.7 1.7 0 0 0 1.55 1H19.6a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.55 1Z"/>'
 };
 
 export function Icon({ name, size = 20, style }) {
@@ -37,6 +48,8 @@ export function Icon({ name, size = 20, style }) {
       stroke="currentColor"
       strokeWidth="1.8"
       style={style}
+      aria-hidden="true"
+      focusable="false"
       dangerouslySetInnerHTML={{ __html: body }}
     />
   );
