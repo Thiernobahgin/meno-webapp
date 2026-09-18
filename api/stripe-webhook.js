@@ -59,16 +59,23 @@ export default async function handler(req, res) {
         break;
       }
       case 'customer.subscription.updated': {
-        const sub = event.data.object;
-        const priceId = sub.items?.data?.[0]?.price?.id;
-        const status = sub.status === 'active' || sub.status === 'trialing' ? 'active'
-          : sub.status === 'past_due' ? 'past_due' : 'canceled';
-        await setStatusByCustomer(sub.customer, {
-          subscription_status: status,
-          subscription_period: periodFromPriceId(priceId),
-          current_period_end: new Date(sub.current_period_end * 1000).toISOString()
-        });
-        break;
+                const sub = event.data.object;
+                const item = sub.items?.data?.[0];
+                const priceId = item?.price?.id;
+                const status = sub.status === 'active' || sub.status === 'trialing' ? 'active'
+                            : sub.status === 'past_due' ? 'past_due' : 'canceled';
+                // Newer Stripe API versions moved the billing period from the
+                // subscription object onto its line item, so fall back accordingly.
+                const periodEndSeconds = sub.current_period_end ?? item?.current_period_end;
+                const patch = {
+                            subscription_status: status,
+                            subscription_period: periodFromPriceId(priceId)
+                };
+                if (periodEndSeconds) {
+                            patch.current_period_end = new Date(periodEndSeconds * 1000).toISOString();
+                }
+                await setStatusByCustomer(sub.customer, patch);
+                break;
       }
       case 'customer.subscription.deleted': {
         const sub = event.data.object;
