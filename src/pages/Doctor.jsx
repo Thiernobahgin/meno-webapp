@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAppData } from '../context/AppDataContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { BottomNav } from '../components/BottomNav.jsx';
@@ -9,13 +8,15 @@ import { addDays, dateKey, fmtDay, fmtFull, fromKey, topConcerns, worseningImpro
 const STAGE_LABELS = { unsure: "I'm not sure", peri: 'Perimenopause', meno: 'Menopause', post: 'Postmenopause', surgical: 'Surgical / medical menopause' };
 
 export default function Doctor() {
-  const { profile, checkins, plan, questions, saveProfile, addQuestion, toggleQuestion, removeQuestion, isPremium } = useAppData();
+  const { profile, checkins, plan, questions, saveProfile, addQuestion, toggleQuestion, removeQuestion } = useAppData();
   const { signOut } = useAuth();
-  const navigate = useNavigate();
   const [apptOpen, setApptOpen] = useState(false);
   const [apptDate, setApptDate] = useState(profile.appointment_date || '');
   const [apptTime, setApptTime] = useState(profile.appointment_time || '');
+  const [apptBusy, setApptBusy] = useState(false);
+  const [apptError, setApptError] = useState('');
   const [qText, setQText] = useState('');
+  const [qError, setQError] = useState('');
   const [summaryOpen, setSummaryOpen] = useState(false);
 
   const tc = topConcerns(checkins);
@@ -23,12 +24,18 @@ export default function Doctor() {
   const recentChanges = plan.filter((p) => p.started_date >= dateKey(addDays(new Date(), -30)));
 
   async function saveAppt() {
-    await saveProfile({ appointment_date: apptDate, appointment_time: apptTime });
+    setApptBusy(true);
+    setApptError('');
+    const result = await saveProfile({ appointment_date: apptDate, appointment_time: apptTime });
+    setApptBusy(false);
+    if (result?.error) { setApptError(result.error); return; }
     setApptOpen(false);
   }
   async function submitQuestion() {
     if (!qText.trim()) return;
-    await addQuestion(qText.trim());
+    setQError('');
+    const result = await addQuestion(qText.trim());
+    if (result?.error) { setQError(result.error); return; }
     setQText('');
   }
 
@@ -47,7 +54,7 @@ export default function Doctor() {
               <div style={{ fontWeight: 700 }}>{fmtDay(fromKey(profile.appointment_date))}{profile.appointment_time ? ` · ${profile.appointment_time}` : ''}</div>
             ) : <div className="lede">Not set</div>}
           </div>
-          <button className="btn-icon" onClick={() => setApptOpen(true)}><Icon name="pencil" size={15} /></button>
+          <button className="btn-icon" aria-label="Edit next appointment" onClick={() => setApptOpen(true)}><Icon name="pencil" size={15} /></button>
         </div>
 
         <div className="section-title">Top concerns</div>
@@ -79,27 +86,29 @@ export default function Doctor() {
 
         <div className="section-title">Questions I want to ask</div>
         <div className="card">
+          {qError && <p className="error-text" style={{ marginBottom: 10 }}>{qError}</p>}
           {questions.map((q) => (
             <div className="qa-row" key={q.id}>
-              <span style={{ ...(q.done ? { textDecoration: 'line-through', color: 'var(--ink-faint)' } : {}), flex: 1, cursor: 'pointer' }} onClick={() => toggleQuestion(q.id)}>{q.text}</span>
-              <button className="plan-remove" onClick={() => removeQuestion(q.id)}><Icon name="x" size={14} /></button>
+              <button
+                type="button" className="note-toggle" aria-pressed={q.done}
+                style={{ ...(q.done ? { textDecoration: 'line-through', color: 'var(--ink-faint)' } : { color: 'var(--ink)' }), flex: 1, textAlign: 'left', fontWeight: 400 }}
+                onClick={() => toggleQuestion(q.id)}
+              >
+                {q.text}
+              </button>
+              <button className="plan-remove" aria-label={`Remove question: ${q.text}`} onClick={() => removeQuestion(q.id)}><Icon name="x" size={14} /></button>
             </div>
           ))}
           <div className="add-inline">
-            <input className="text-input" value={qText} onChange={(e) => setQText(e.target.value)} placeholder="Add a question" onKeyDown={(e) => e.key === 'Enter' && submitQuestion()} />
-            <button className="btn-icon" onClick={submitQuestion}><Icon name="plus" size={16} /></button>
+            <label className="field-label" htmlFor="doctor-question" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>Add a question</label>
+            <input id="doctor-question" className="text-input" value={qText} onChange={(e) => setQText(e.target.value)} placeholder="Add a question" onKeyDown={(e) => e.key === 'Enter' && submitQuestion()} />
+            <button className="btn-icon" aria-label="Add question" onClick={submitQuestion}><Icon name="plus" size={16} /></button>
           </div>
         </div>
 
-        {isPremium ? (
-          <button className="btn btn-primary" style={{ marginTop: 18 }} onClick={() => setSummaryOpen(true)}>
-            Create my health summary <Icon name="chevronR" size={16} />
-          </button>
-        ) : (
-          <button className="btn btn-gold" style={{ marginTop: 18 }} onClick={() => navigate('/premium')}>
-            <Icon name="crown" size={16} /> Unlock printable summary (Premium)
-          </button>
-        )}
+        <button className="btn btn-primary" style={{ marginTop: 18 }} onClick={() => setSummaryOpen(true)}>
+          Create my health summary <Icon name="chevronR" size={16} />
+        </button>
 
         <button className="btn-ghost" style={{ marginTop: 18, width: '100%', justifyContent: 'center' }} onClick={signOut}>
           Sign out
@@ -107,17 +116,18 @@ export default function Doctor() {
       </div>
 
       {apptOpen && (
-        <div className="modal-overlay" onClick={() => setApptOpen(false)}>
+        <div className="modal-overlay" onClick={() => !apptBusy && setApptOpen(false)}>
           <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18 }}>Next appointment</h3>
-              <button className="btn-icon" onClick={() => setApptOpen(false)}><Icon name="x" size={16} /></button>
+              <button className="btn-icon" aria-label="Close" onClick={() => setApptOpen(false)}><Icon name="x" size={16} /></button>
             </div>
-            <label className="field-label">Date</label>
-            <input className="text-input" type="date" style={{ marginBottom: 14 }} value={apptDate} onChange={(e) => setApptDate(e.target.value)} />
-            <label className="field-label">Time</label>
-            <input className="text-input" type="time" style={{ marginBottom: 18 }} value={apptTime} onChange={(e) => setApptTime(e.target.value)} />
-            <button className="btn btn-primary" onClick={saveAppt}>Save</button>
+            <label className="field-label" htmlFor="appt-date">Date</label>
+            <input id="appt-date" className="text-input" type="date" style={{ marginBottom: 14 }} value={apptDate} onChange={(e) => setApptDate(e.target.value)} />
+            <label className="field-label" htmlFor="appt-time">Time</label>
+            <input id="appt-time" className="text-input" type="time" style={{ marginBottom: 18 }} value={apptTime} onChange={(e) => setApptTime(e.target.value)} />
+            {apptError && <p className="error-text" style={{ marginBottom: 12 }}>{apptError}</p>}
+            <button className="btn btn-primary" disabled={apptBusy} onClick={saveAppt}>{apptBusy ? 'Saving…' : 'Save'}</button>
           </div>
         </div>
       )}
@@ -127,7 +137,7 @@ export default function Doctor() {
           <div className="modal-sheet" onClick={(e) => e.stopPropagation()} id="print-summary">
             <div className="modal-head">
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18 }}>Health summary</h3>
-              <button className="btn-icon" onClick={() => setSummaryOpen(false)}><Icon name="x" size={16} /></button>
+              <button className="btn-icon" aria-label="Close" onClick={() => setSummaryOpen(false)}><Icon name="x" size={16} /></button>
             </div>
             <h2 style={{ fontFamily: 'var(--font-display)' }}>MENO health summary{profile.name ? ` — ${profile.name}` : ''}</h2>
             <p className="lede">Generated {fmtFull(new Date())}</p>

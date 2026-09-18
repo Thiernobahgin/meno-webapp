@@ -1,22 +1,7 @@
 import { useState } from 'react';
 import { useAppData } from '../context/AppDataContext.jsx';
 import { Icon } from '../lib/icons.jsx';
-
-const STAGE_OPTIONS = [
-  { v: 'unsure', t: "I'm not sure", s: "Let's figure it out together", icon: 'sparkle' },
-  { v: 'peri', t: 'Perimenopause', s: 'Cycles changing', icon: 'leaf' },
-  { v: 'meno', t: 'Menopause', s: 'No period for 12 months', icon: 'leaf' },
-  { v: 'post', t: 'Postmenopause', s: 'Past the transition', icon: 'leaf' },
-  { v: 'surgical', t: 'Surgical / medical menopause', s: 'Brought on by surgery or treatment', icon: 'leaf' }
-];
-const SYMPTOM_OPTIONS = ['Hot flashes', 'Night sweats', 'Sleep problems', 'Brain fog', 'Fatigue', 'Anxiety', 'Mood changes', 'Headaches', 'Joint / muscle pain', 'Libido changes', 'Vaginal dryness', 'Period changes', 'Weight / body changes'];
-const GOAL_OPTIONS = [
-  { t: "Understand what's happening", s: "Plain-language context for what you're feeling" },
-  { t: 'Track whether symptoms are changing', s: "See if things are getting better or worse" },
-  { t: 'Understand my patterns', s: 'Spot what tends to trigger or ease symptoms' },
-  { t: 'Track treatments / lifestyle changes', s: "See what's actually working" },
-  { t: 'Prepare for my doctor', s: 'Walk in with clear notes, not guesses' }
-];
+import { GOAL_OPTIONS, STAGE_OPTIONS, SYMPTOM_OPTIONS, toggleArr } from '../lib/options.js';
 
 function HeroSprig() {
   return (
@@ -30,10 +15,6 @@ function HeroSprig() {
   );
 }
 
-function toggleArr(arr, val) {
-  return arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
-}
-
 export default function Onboarding() {
   const { profile, saveProfile } = useAppData();
   const [step, setStep] = useState(0);
@@ -41,9 +22,15 @@ export default function Onboarding() {
   const [stage, setStage] = useState(profile.stage || '');
   const [symptoms, setSymptoms] = useState(profile.symptoms || []);
   const [goals, setGoals] = useState(profile.goals || []);
+  const [finishError, setFinishError] = useState('');
+  const [finishing, setFinishing] = useState(false);
 
-  function finish() {
-    saveProfile({ name, stage, symptoms, goals, onboarded: true });
+  async function finish() {
+    setFinishing(true);
+    setFinishError('');
+    const result = await saveProfile({ name, stage, symptoms, goals, onboarded: true });
+    setFinishing(false);
+    if (result?.error) setFinishError(result.error);
   }
 
   if (step === 0) {
@@ -73,7 +60,7 @@ export default function Onboarding() {
   return (
     <div className="screen-pad" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <div className="ob-header">
-        <button className="btn-icon" onClick={() => setStep((s) => Math.max(0, s - 1))}><Icon name="chevronL" size={18} /></button>
+        <button className="btn-icon" aria-label="Back" onClick={() => setStep((s) => Math.max(0, s - 1))}><Icon name="chevronL" size={18} /></button>
         {step < 4 && (
           <>
             <div className="progress-track"><div className="progress-fill" style={{ width: `${(step / 4) * 100}%` }} /></div>
@@ -86,15 +73,20 @@ export default function Onboarding() {
         <>
           <h1 style={{ fontSize: 22 }}>Where are you in your menopause journey?</h1>
           <p className="lede" style={{ margin: '8px 0 18px' }}>This helps us personalize your experience.</p>
-          <label className="field-label">What should we call you?</label>
-          <input className="text-input" style={{ marginBottom: 18 }} value={name} onChange={(e) => setName(e.target.value)} placeholder="Your first name" />
-          {STAGE_OPTIONS.map((o) => (
-            <div key={o.v} className={'choice-row' + (stage === o.v ? ' selected' : '')} onClick={() => setStage(o.v)}>
-              <div className="choice-icon"><Icon name={o.icon} size={18} /></div>
-              <div className="choice-text"><div className="choice-title">{o.t}</div><div className="choice-sub">{o.s}</div></div>
-              <div className="choice-mark">{stage === o.v && <Icon name="check" size={13} />}</div>
-            </div>
-          ))}
+          <label className="field-label" htmlFor="ob-name">What should we call you?</label>
+          <input id="ob-name" className="text-input" style={{ marginBottom: 18 }} value={name} onChange={(e) => setName(e.target.value)} placeholder="Your first name" />
+          <div role="radiogroup" aria-label="Where are you in your menopause journey?">
+            {STAGE_OPTIONS.map((o) => (
+              <button
+                type="button" key={o.v} role="radio" aria-checked={stage === o.v}
+                className={'choice-row' + (stage === o.v ? ' selected' : '')} onClick={() => setStage(o.v)}
+              >
+                <div className="choice-icon"><Icon name={o.icon} size={18} /></div>
+                <div className="choice-text"><div className="choice-title">{o.t}</div><div className="choice-sub">{o.s}</div></div>
+                <div className="choice-mark">{stage === o.v && <Icon name="check" size={13} />}</div>
+              </button>
+            ))}
+          </div>
           <div style={{ marginTop: 'auto', paddingTop: 16 }}>
             <button className="btn btn-primary" disabled={!stage} onClick={() => setStep(2)}>Continue <Icon name="chevronR" size={16} /></button>
           </div>
@@ -105,12 +97,18 @@ export default function Onboarding() {
         <>
           <h1 style={{ fontSize: 22 }}>What have you been experiencing?</h1>
           <p className="lede" style={{ margin: '8px 0 18px' }}>Select all that apply. You can always change this later.</p>
-          {SYMPTOM_OPTIONS.map((s) => (
-            <div key={s} className={'choice-row' + (symptoms.includes(s) ? ' selected' : '')} style={{ padding: '12px 16px' }} onClick={() => setSymptoms((arr) => toggleArr(arr, s))}>
-              <div className="choice-text"><div className="choice-title" style={{ fontWeight: 600 }}>{s}</div></div>
-              <div className="choice-mark checkbox">{symptoms.includes(s) && <Icon name="check" size={13} />}</div>
-            </div>
-          ))}
+          <div role="group" aria-label="What have you been experiencing?">
+            {SYMPTOM_OPTIONS.map((s) => (
+              <button
+                type="button" key={s} role="checkbox" aria-checked={symptoms.includes(s)}
+                className={'choice-row' + (symptoms.includes(s) ? ' selected' : '')} style={{ padding: '12px 16px' }}
+                onClick={() => setSymptoms((arr) => toggleArr(arr, s))}
+              >
+                <div className="choice-text"><div className="choice-title" style={{ fontWeight: 600 }}>{s}</div></div>
+                <div className="choice-mark checkbox">{symptoms.includes(s) && <Icon name="check" size={13} />}</div>
+              </button>
+            ))}
+          </div>
           <div style={{ marginTop: 16, paddingTop: 4 }}>
             <button className="btn btn-primary" onClick={() => setStep(3)}>Continue <Icon name="chevronR" size={16} /></button>
           </div>
@@ -121,13 +119,18 @@ export default function Onboarding() {
         <>
           <h1 style={{ fontSize: 22 }}>What would you like help with most?</h1>
           <p className="lede" style={{ margin: '8px 0 18px' }}>You can choose more than one.</p>
-          {GOAL_OPTIONS.map((g) => (
-            <div key={g.t} className={'choice-row' + (goals.includes(g.t) ? ' selected' : '')} onClick={() => setGoals((arr) => toggleArr(arr, g.t))}>
-              <div className="choice-icon"><Icon name="sparkle" size={17} /></div>
-              <div className="choice-text"><div className="choice-title">{g.t}</div><div className="choice-sub">{g.s}</div></div>
-              <div className="choice-mark checkbox">{goals.includes(g.t) && <Icon name="check" size={13} />}</div>
-            </div>
-          ))}
+          <div role="group" aria-label="What would you like help with most?">
+            {GOAL_OPTIONS.map((g) => (
+              <button
+                type="button" key={g.t} role="checkbox" aria-checked={goals.includes(g.t)}
+                className={'choice-row' + (goals.includes(g.t) ? ' selected' : '')} onClick={() => setGoals((arr) => toggleArr(arr, g.t))}
+              >
+                <div className="choice-icon"><Icon name="sparkle" size={17} /></div>
+                <div className="choice-text"><div className="choice-title">{g.t}</div><div className="choice-sub">{g.s}</div></div>
+                <div className="choice-mark checkbox">{goals.includes(g.t) && <Icon name="check" size={13} />}</div>
+              </button>
+            ))}
+          </div>
           <div className="note-card" style={{ marginTop: 6 }}>
             <Icon name="heart" size={18} />
             <span>We&rsquo;re here to support you with trusted information — not to replace your healthcare professional.</span>
@@ -149,8 +152,11 @@ export default function Onboarding() {
             ))}
           </div>
           <div className="quote-card"><p>&ldquo;Small steps today can make a big difference tomorrow.&rdquo;</p></div>
+          {finishError && <p className="error-text" style={{ marginTop: 12 }}>{finishError}</p>}
           <div style={{ marginTop: 16 }}>
-            <button className="btn btn-primary" onClick={finish}>Start my first check-in <Icon name="chevronR" size={16} /></button>
+            <button className="btn btn-primary" disabled={finishing} onClick={finish}>
+              {finishing ? 'Saving…' : 'Start my first check-in'} <Icon name="chevronR" size={16} />
+            </button>
           </div>
         </div>
       )}
