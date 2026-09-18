@@ -6,7 +6,7 @@
 // Stripe Checkout session for a subscription, and returns its URL. The
 // frontend just redirects the browser to that URL — no Stripe.js needed.
 import Stripe from 'stripe';
-import { supabaseAdmin, getUserFromRequest } from './_supabaseAdmin.js';
+import { supabaseAdmin, getUserFromRequest, hasActiveAccess } from './_supabaseAdmin.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -27,9 +27,16 @@ export default async function handler(req, res) {
   try {
     const { data: profile } = await admin
       .from('profiles')
-      .select('stripe_customer_id')
+      .select('stripe_customer_id, subscription_status, grace_period_ends_at')
       .eq('id', user.id)
       .single();
+
+    // Don't let someone who is already paying start a second subscription
+    // (e.g. a double-click, or replaying this request) — send them to the
+    // billing portal instead.
+    if (hasActiveAccess(profile)) {
+      return res.status(409).json({ error: 'already_subscribed' });
+    }
 
     let customerId = profile?.stripe_customer_id;
     if (!customerId) {
@@ -46,8 +53,11 @@ export default async function handler(req, res) {
       customer: customerId,
       client_reference_id: user.id,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl}/premium?checkout=success`,
-      cancel_url: `${appUrl}/premium?checkout=cancelled`,
+      // "/" resolves to the Subscribe screen (which polls for the webhook's
+      // confirmation) for anyone without access yet — whether they got here
+      // from the forced paywall or from My Account's billing section.
+      success_url: `${appUrl}/?checkout=success`,
+      cancel_url: `${appUrl}/?checkout=cancelled`,
       subscription_data: { metadata: { supabase_user_id: user.id } }
     });
 

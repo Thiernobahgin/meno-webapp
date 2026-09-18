@@ -2,10 +2,10 @@
 // Body: { question: string, context: string, history: [{role, content}] }
 // Header: Authorization: Bearer <supabase access token>
 //
-// A Premium-gated feature: calls Claude with a grounded summary of the
+// A subscription-gated feature: calls Claude with a grounded summary of the
 // user's own check-ins/plan (built on the frontend) so answers stay
 // specific to them, never a generic medical opinion.
-import { getUserFromRequest, supabaseAdmin } from './_supabaseAdmin.js';
+import { getUserFromRequest, supabaseAdmin, hasActiveAccess } from './_supabaseAdmin.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -16,12 +16,12 @@ export default async function handler(req, res) {
   const admin = supabaseAdmin();
   const { data: profile } = await admin
     .from('profiles')
-    .select('subscription_status')
+    .select('subscription_status, grace_period_ends_at')
     .eq('id', user.id)
     .single();
 
-  if (profile?.subscription_status !== 'active') {
-    return res.status(402).json({ error: 'premium_required' });
+  if (!hasActiveAccess(profile)) {
+    return res.status(402).json({ error: 'subscription_required' });
   }
 
   const { question, context, history } = req.body || {};

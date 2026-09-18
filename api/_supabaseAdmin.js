@@ -22,3 +22,15 @@ export async function getUserFromRequest(req) {
   if (error || !data?.user) return null;
   return data.user;
 }
+
+// Same rule as the public.is_subscribed() Postgres function used in RLS:
+// active, or past_due but still inside its grace period. Kept in one place
+// so every /api route that needs to gate on subscription agrees with the DB.
+export function hasActiveAccess(profile) {
+  if (!profile) return false;
+  if (profile.subscription_status === 'active') return true;
+  if (profile.subscription_status === 'past_due' && profile.grace_period_ends_at) {
+    return new Date(profile.grace_period_ends_at).getTime() > Date.now();
+  }
+  return false;
+}
