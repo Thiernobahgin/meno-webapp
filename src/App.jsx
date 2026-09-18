@@ -4,6 +4,7 @@ import { useAppData } from './context/AppDataContext.jsx';
 import { Icon } from './lib/icons.jsx';
 
 import AuthPage from './pages/AuthPage.jsx';
+import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 import Onboarding from './pages/Onboarding.jsx';
 import Today from './pages/Today.jsx';
 import Insights from './pages/Insights.jsx';
@@ -23,11 +24,12 @@ function Loading() {
 }
 
 export default function App() {
-  const { user, loading: authLoading } = useAuth();
-  const { profile, loading: dataLoading } = useAppData();
+  const { user, loading: authLoading, passwordRecovery } = useAuth();
+    const { profile, loading: dataLoading } = useAppData();
 
-  if (authLoading) return <Loading />;
-  if (!user) return <AuthPage />;
+    if (authLoading) return <Loading />;
+    if (passwordRecovery) return <ResetPasswordPage />;
+    if (!user) return <AuthPage />;
   if (dataLoading) return <Loading />;
 
   if (!profile.onboarded) {
