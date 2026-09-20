@@ -1,7 +1,7 @@
 // GET /api/prices
 // Returns the live monthly/annual price (amount + currency) straight from
-// Stripe, so the Premium page never drifts out of sync with what you've
-// actually configured there.
+// Stripe, so the Landing/Subscribe/Account billing pages never drift out of
+// sync with what you've actually configured there.
 import Stripe from 'stripe';
 
 export default async function handler(req, res) {

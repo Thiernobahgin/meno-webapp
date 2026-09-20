@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Icon } from '../lib/icons.jsx';
 
 export default function AuthPage() {
   const { signIn, signUp, resetPasswordForEmail } = useAuth();
-  const [mode, setMode] = useState('signin'); // 'signin' | 'signup' | 'forgot'
+  const [params] = useSearchParams();
+  const [mode, setMode] = useState(params.get('mode') === 'signup' ? 'signup' : 'signin'); // 'signin' | 'signup' | 'forgot'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -24,7 +26,7 @@ export default function AuthPage() {
       if (mode === 'signup') {
         const { error: err } = await signUp(email, password);
         if (err) throw err;
-        setNotice('Check your email to confirm your account, then sign in.');
+        setNotice("Check your email to confirm your account, then sign in — you'll choose a plan next.");
       } else if (mode === 'forgot') {
         const { error: err } = await resetPasswordForEmail(email);
         if (err) throw err;
@@ -58,10 +60,10 @@ export default function AuthPage() {
 
   return (
     <div className="screen-pad" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-      <div className="brandmark" style={{ justifyContent: 'center', color: 'var(--accent)', marginBottom: 18 }}>
+      <Link to="/" className="brandmark" style={{ justifyContent: 'center', color: 'var(--accent)', marginBottom: 18, textDecoration: 'none' }}>
         <Icon name="leaf" size={26} />
         <span>MENO</span>
-      </div>
+      </Link>
       <h1 style={{ fontSize: 22, textAlign: 'center', marginBottom: 6 }}>
         {titles[mode]}
       </h1>

@@ -10,21 +10,34 @@ export default function Plan() {
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState('');
   const [type, setType] = useState('medication');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [rowError, setRowError] = useState('');
 
   const items = plan.filter((p) => filter === 'all' || p.type === filter);
   const withImpact = plan.map((p) => ({ p, impact: planImpact(checkins, p) })).filter((x) => x.impact && x.impact.length);
 
   async function confirmAdd() {
     if (!name.trim()) return;
-    await addPlanItem({ name: name.trim(), type, started_date: dateKey(), active: true });
+    setBusy(true);
+    setError('');
+    const result = await addPlanItem({ name: name.trim(), type, started_date: dateKey(), active: true });
+    setBusy(false);
+    if (result?.error) { setError(result.error); return; }
     setModalOpen(false); setName(''); setType('medication');
+  }
+
+  async function remove(id) {
+    setRowError('');
+    const result = await removePlanItem(id);
+    if (result?.error) setRowError(result.error);
   }
 
   return (
     <div className="scroll-area">
       <div className="app-header" style={{ alignItems: 'center' }}>
         <h1>My Plan</h1>
-        <button className="btn-fab" onClick={() => setModalOpen(true)}><Icon name="plus" size={20} /></button>
+        <button className="btn-fab" aria-label="Add to plan" onClick={() => setModalOpen(true)}><Icon name="plus" size={20} /></button>
       </div>
       <div className="screen-pad" style={{ paddingTop: 12 }}>
         <div className="pill-tabs">
@@ -34,6 +47,7 @@ export default function Plan() {
         </div>
 
         <div className="section-title">My current plan</div>
+        {rowError && <p className="error-text" style={{ marginBottom: 10 }}>{rowError}</p>}
         {!items.length ? (
           <div className="empty-state">
             <div style={{ color: 'var(--accent-soft)' }}><Icon name="clipboard" size={34} /></div>
@@ -53,7 +67,7 @@ export default function Plan() {
                     <div className="plan-name">{p.name}</div>
                     <div className="plan-date">Started {fmtDay(fromKey(p.started_date))}</div>
                   </div>
-                  <button className="plan-remove" onClick={() => removePlanItem(p.id)}><Icon name="trash" size={16} /></button>
+                  <button className="plan-remove" aria-label={`Remove ${p.name} from plan`} onClick={() => remove(p.id)}><Icon name="trash" size={16} /></button>
                 </div>
               );
             })}
@@ -82,20 +96,21 @@ export default function Plan() {
       </div>
 
       {modalOpen && (
-        <div className="modal-overlay" onClick={() => setModalOpen(false)}>
+        <div className="modal-overlay" onClick={() => !busy && setModalOpen(false)}>
           <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18 }}>Add to your plan</h3>
-              <button className="btn-icon" onClick={() => setModalOpen(false)}><Icon name="x" size={16} /></button>
+              <button className="btn-icon" aria-label="Close" onClick={() => setModalOpen(false)}><Icon name="x" size={16} /></button>
             </div>
-            <label className="field-label">What are you adding?</label>
-            <input className="text-input" style={{ marginBottom: 14 }} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Estradiol, Magnesium, Reduced caffeine" />
-            <label className="field-label">Type</label>
-            <div className="toggle-group" style={{ marginBottom: 16 }}>
-              <button className={'toggle-btn' + (type === 'medication' ? ' active' : '')} onClick={() => setType('medication')}>Medication</button>
-              <button className={'toggle-btn' + (type === 'lifestyle' ? ' active' : '')} onClick={() => setType('lifestyle')}>Lifestyle</button>
+            <label className="field-label" htmlFor="plan-name">What are you adding?</label>
+            <input id="plan-name" className="text-input" style={{ marginBottom: 14 }} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Estradiol, Magnesium, Reduced caffeine" />
+            <label className="field-label" id="plan-type-label">Type</label>
+            <div className="toggle-group" role="group" aria-labelledby="plan-type-label" style={{ marginBottom: 16 }}>
+              <button type="button" className={'toggle-btn' + (type === 'medication' ? ' active' : '')} aria-pressed={type === 'medication'} onClick={() => setType('medication')}>Medication</button>
+              <button type="button" className={'toggle-btn' + (type === 'lifestyle' ? ' active' : '')} aria-pressed={type === 'lifestyle'} onClick={() => setType('lifestyle')}>Lifestyle</button>
             </div>
-            <button className="btn btn-primary" onClick={confirmAdd}>Add to plan</button>
+            {error && <p className="error-text" style={{ marginBottom: 12 }}>{error}</p>}
+            <button className="btn btn-primary" disabled={busy} onClick={confirmAdd}>{busy ? 'Adding…' : 'Add to plan'}</button>
           </div>
         </div>
       )}
