@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../lib/icons.jsx';
 
@@ -30,11 +29,6 @@ function PreviewCard() {
 
 export default function Landing() {
   const navigate = useNavigate();
-  const [prices, setPrices] = useState(null);
-
-  useEffect(() => {
-    fetch('/api/prices').then((r) => r.json()).then((d) => { if (!d.error) setPrices(d); }).catch(() => {});
-  }, []);
 
   return (
     <div className="scroll-area">
@@ -57,25 +51,6 @@ export default function Landing() {
               </div>
             </div>
           ))}
-        </div>
-
-        <div className="card" style={{ marginTop: 12, textAlign: 'left' }}>
-          <div style={{ fontWeight: 800, fontSize: 13, letterSpacing: '.02em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginBottom: 10 }}>Pricing</div>
-          {prices ? (
-            <div style={{ display: 'flex', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 18 }}>${prices.monthly.amount}<span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-faint)' }}>/mo</span></div>
-                <div className="lede" style={{ fontSize: 11.5 }}>Billed monthly</div>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 18 }}>${prices.annual.amount}<span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-faint)' }}>/yr</span></div>
-                <div className="lede" style={{ fontSize: 11.5 }}>≈ ${(prices.annual.amount / 12).toFixed(2)}/mo, best value</div>
-              </div>
-            </div>
-          ) : <p className="lede">Loading pricing…</p>}
-          <p className="lede" style={{ fontSize: 11.5, marginTop: 10 }}>
-            MENO is a paid subscription — there is no free tier and no free trial. Both plans renew automatically until you cancel; you can cancel anytime and keep access until the period you&rsquo;ve paid for ends.
-          </p>
         </div>
 
         <div style={{ marginTop: 22, marginBottom: 8 }}>
