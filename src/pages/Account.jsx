@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { Icon } from '../lib/icons.jsx';
 import { callApi } from '../lib/api.js';
 import { GOAL_OPTIONS, STAGE_OPTIONS, SYMPTOM_OPTIONS, toggleArr } from '../lib/options.js';
+import { isNativeApp } from '../lib/platform.js';
 
 function fmtDate(iso) {
   if (!iso) return '';
@@ -116,8 +117,12 @@ function BillingSection() {
   const [prices, setPrices] = useState(null);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
+  const native = isNativeApp();
 
   useState(() => {
+    // Same rule as Subscribe.jsx: the iOS app never sells or manages
+    // billing itself, so it has no reason to fetch prices either.
+    if (native) return;
     fetch('/api/prices').then((r) => r.json()).then((d) => { if (!d.error) setPrices(d); }).catch(() => {});
   });
 
@@ -143,6 +148,17 @@ function BillingSection() {
   }
 
   const status = profile.subscription_status;
+
+  if (native) {
+    return (
+      <div className="card">
+        <p className="lede" style={{ fontSize: 13 }}>
+          Subscriptions are managed on the MENO website — visit <strong>meno-webapp-three.vercel.app</strong> in
+          your browser to subscribe, update your card, or cancel.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="card">

@@ -5,6 +5,7 @@ import { useAppData } from '../context/AppDataContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Icon } from '../lib/icons.jsx';
 import { callApi } from '../lib/api.js';
+import { isNativeApp } from '../lib/platform.js';
 
 const FEATURES = [
   'Daily symptom check-ins, personalized to you',
@@ -23,12 +24,17 @@ export default function Subscribe() {
   const [busy, setBusy] = useState('');
   const [checkoutError, setCheckoutError] = useState('');
   const [confirming, setConfirming] = useState(false);
+  const native = isNativeApp();
 
   useEffect(() => {
+    // The iOS app never sells or manages a subscription itself — Apple
+    // requires that for an app using an external (non-Apple) payment
+    // system — so it has no reason to even fetch prices.
+    if (native) return;
     fetch('/api/prices').then((r) => r.json()).then((d) => {
       if (d.error) setPriceError(true); else setPrices(d);
     }).catch(() => setPriceError(true));
-  }, []);
+  }, [native]);
 
   useEffect(() => {
     if (params.get('checkout') === 'success') {
@@ -77,6 +83,34 @@ export default function Subscribe() {
   const wasSubscribedBefore = !!profile.stripe_customer_id;
   const isPastDue = profile.subscription_status === 'past_due';
   const isExpired = profile.subscription_status === 'canceled';
+
+  if (native) {
+    return (
+      <div className="scroll-area">
+        <div className="app-header" style={{ alignItems: 'center' }}>
+          <h1 style={{ fontSize: 20 }}>MENO</h1>
+        </div>
+        <div className="screen-pad" style={{ paddingTop: 8 }}>
+          <p className="lede" style={{ marginBottom: 18 }}>
+            MENO is a paid, subscription-only app — there&rsquo;s no free tier or trial.
+          </p>
+          <div className="card" style={{ textAlign: 'center' }}>
+            <p className="lede" style={{ marginBottom: 4 }}>
+              To subscribe, visit <strong>meno-webapp-three.vercel.app</strong> in your web browser.
+            </p>
+            <p className="lede" style={{ fontSize: 13 }}>
+              Already subscribed? Sign in here with the same email and your account unlocks automatically.
+            </p>
+          </div>
+          <div style={{ marginTop: 24, display: 'flex', gap: 16, justifyContent: 'center', fontSize: 13 }}>
+            <Link to="/help">Help</Link>
+            <Link to="/privacy">Privacy</Link>
+            <button type="button" className="note-toggle" onClick={signOut}>Sign out</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="scroll-area">

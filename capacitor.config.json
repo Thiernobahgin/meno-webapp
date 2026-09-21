@@ -1,0 +1,12 @@
+{
+  "appId": "com.menoapp.ios",
+  "appName": "MENO",
+  "webDir": "dist",
+  "server": {
+    "url": "https://meno-webapp-three.vercel.app",
+    "cleartext": false
+  },
+  "ios": {
+    "contentInset": "always"
+  }
+}
