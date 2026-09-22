@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 import { supabase } from '../supabaseClient';
 import { useAuth } from './AuthContext';
 import { dateKey } from '../lib/analytics';
+import { loginPurchases } from '../lib/revenuecat.js';
 
 const AppDataContext = createContext(null);
 
@@ -44,6 +45,9 @@ export function AppDataProvider({ children }) {
   const loadAll = useCallback(async () => {
     if (!user) { setLoading(false); return; }
     setLoading(true);
+    // No-op on the web; on iOS this links the RevenueCat identity to this
+    // Supabase user id so purchase webhooks land on the right profile row.
+    loginPurchases(user.id);
     const [{ data: prof }, { data: ci }, { data: pl }, { data: qs }] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       supabase.from('checkins').select('*').eq('user_id', user.id).order('date', { ascending: true }),

@@ -178,3 +178,17 @@ create table if not exists public.stripe_events (
   type text,
   created_at timestamptz not null default now()
 );
+
+-- ============================================================
+-- REVENUECAT (iOS in-app purchases via App Store / StoreKit)
+-- ============================================================
+-- Which billing system last updated this profile's subscription fields
+-- ('stripe' | 'revenuecat') — purely informational, hasAccess()/is_subscribed()
+-- don't need it since both webhooks write the same subscription_status shape.
+alter table public.profiles add column if not exists subscription_source text;
+
+create table if not exists public.revenuecat_events (
+  id text primary key,
+  type text,
+  created_at timestamptz not null default now()
+);

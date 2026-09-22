@@ -6,6 +6,7 @@ import { Icon } from '../lib/icons.jsx';
 import { callApi } from '../lib/api.js';
 import { GOAL_OPTIONS, STAGE_OPTIONS, SYMPTOM_OPTIONS, toggleArr } from '../lib/options.js';
 import { isNativeApp } from '../lib/platform.js';
+import { restorePurchases, hasEntitlement } from '../lib/revenuecat.js';
 
 function fmtDate(iso) {
   if (!iso) return '';
@@ -149,15 +150,18 @@ function BillingSection() {
 
   const status = profile.subscription_status;
 
-  if (native) {
-    return (
-      <div className="card">
-        <p className="lede" style={{ fontSize: 13 }}>
-          Subscriptions are managed on the MENO website — visit <strong>meno-webapp-three.vercel.app</strong> in
-          your browser to subscribe, update your card, or cancel.
-        </p>
-      </div>
-    );
+  async function restoreNative() {
+    setBusy('restore');
+    setError('');
+    try {
+      const customerInfo = await restorePurchases();
+      if (hasEntitlement(customerInfo)) await reload();
+      else setError('No active subscription found for this Apple ID.');
+    } catch (err) {
+      setError(err?.message || 'Could not restore purchases.');
+    } finally {
+      setBusy('');
+    }
   }
 
   return (
@@ -186,24 +190,42 @@ function BillingSection() {
         <p className="lede" style={{ fontSize: 13, marginBottom: 14 }}>{profile.stripe_customer_id ? 'No active subscription.' : "You haven't subscribed yet."}</p>
       )}
 
-      {(status === 'active' || status === 'past_due') && profile.stripe_customer_id && (
-        <button className="btn btn-secondary" disabled={!!busy} onClick={openPortal}>{busy === 'portal' ? 'Opening…' : 'Manage billing'}</button>
-      )}
+      {native ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {(status === 'active' || status === 'past_due') && (
+            <p className="lede" style={{ fontSize: 12.5 }}>
+              Manage or cancel your subscription in iPhone Settings &gt; [your name] &gt; Subscriptions.
+            </p>
+          )}
+          {(status === 'canceled' || status === 'free') && (
+            <Link className="btn btn-gold" to="/subscribe" style={{ justifyContent: 'center' }}>See subscription options</Link>
+          )}
+          <button className="btn-ghost" style={{ justifyContent: 'center' }} disabled={busy === 'restore'} onClick={restoreNative}>
+            {busy === 'restore' ? 'Restoring…' : 'Restore purchases'}
+          </button>
+        </div>
+      ) : (
+        <>
+          {(status === 'active' || status === 'past_due') && profile.stripe_customer_id && (
+            <button className="btn btn-secondary" disabled={!!busy} onClick={openPortal}>{busy === 'portal' ? 'Opening…' : 'Manage billing'}</button>
+          )}
 
-      {(status === 'canceled' || status === 'free') && (
-        prices ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <button className="btn btn-gold" disabled={!!busy} onClick={() => subscribe(prices.annual.id)}>
-              {busy === prices.annual.id ? 'Redirecting…' : `Subscribe yearly — $${prices.annual.amount}/yr`}
-            </button>
-            <button className="btn btn-secondary" disabled={!!busy} onClick={() => subscribe(prices.monthly.id)}>
-              {busy === prices.monthly.id ? 'Redirecting…' : `Subscribe monthly — $${prices.monthly.amount}/mo`}
-            </button>
-            {profile.stripe_customer_id && (
-              <button className="btn-ghost" style={{ justifyContent: 'center' }} disabled={!!busy} onClick={openPortal}>Manage billing / view invoices</button>
-            )}
-          </div>
-        ) : <p className="lede">Loading pricing…</p>
+          {(status === 'canceled' || status === 'free') && (
+            prices ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <button className="btn btn-gold" disabled={!!busy} onClick={() => subscribe(prices.annual.id)}>
+                  {busy === prices.annual.id ? 'Redirecting…' : `Subscribe yearly — $${prices.annual.amount}/yr`}
+                </button>
+                <button className="btn btn-secondary" disabled={!!busy} onClick={() => subscribe(prices.monthly.id)}>
+                  {busy === prices.monthly.id ? 'Redirecting…' : `Subscribe monthly — $${prices.monthly.amount}/mo`}
+                </button>
+                {profile.stripe_customer_id && (
+                  <button className="btn-ghost" style={{ justifyContent: 'center' }} disabled={!!busy} onClick={openPortal}>Manage billing / view invoices</button>
+                )}
+              </div>
+            ) : <p className="lede">Loading pricing…</p>
+          )}
+        </>
       )}
       {error && <p className="error-text" style={{ marginTop: 12 }}>{error}</p>}
     </div>

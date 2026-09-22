@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { logoutPurchases } from '../lib/revenuecat.js';
 
 const AuthContext = createContext(null);
 
@@ -23,7 +24,10 @@ export function AuthProvider({ children }) {
     passwordRecovery,
     signUp: (email, password) => supabase.auth.signUp({ email, password }),
     signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
-    signOut: () => supabase.auth.signOut(),
+    signOut: async () => {
+      await logoutPurchases();
+      return supabase.auth.signOut();
+    },
     resetPasswordForEmail: (email) =>
       supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`
